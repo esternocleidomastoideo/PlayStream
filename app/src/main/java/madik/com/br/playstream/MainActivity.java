@@ -2,6 +2,7 @@ package madik.com.br.playstream;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
@@ -42,6 +43,7 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
     public static BufferedInputStream bis;
     public static InputStream inputStream;
     public static OutputStream outputStream;
+    public static FileOutputStream fileOutputStream;
     public static long bytesLidos=0;
     public static BufferedOutputStream boi;
     private Handler handler = new Handler();
@@ -62,14 +64,23 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
         setContentView(R.layout.activity_main);
         TextView tv = (TextView) findViewById(R.id.textView2);
         TextView tv2 = (TextView) findViewById(R.id.textViewTransferidos);
+
+        int MaxSizeFile=2*1048576; //10 megabytes
+        Drawable draw = getResources().getDrawable(R.drawable.my_progress_bar);
         progressbar = (ProgressBar) findViewById(R.id.progressBar);
+        progressbar.setProgress(0);
+        progressbar.setSecondaryProgress(1);
+        progressbar.setMax(MaxSizeFile);
+        progressbar.setProgressDrawable(draw);
+
+
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
 
         new PlayStreaming().execute();
 
-       new GravarMyStreaming().execute();
+       //new GravarMyStreaming().execute();
 
     }
 
@@ -106,8 +117,8 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
     public void onPrepared(MediaPlayer mPlayer) {
         if(mPlayer.isPlaying()){
         }else{
-            Log.i("#### LIBERANDO ####","Liberando recursos...");
-            mPlayer.release();
+            //mPlayer.release();
+            Log.i("#####","Player busy...");
 
         }
     }
@@ -123,29 +134,23 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
 
     public void updateProgress(long bytesLidos){
 
-        final long progresso=progressbar.getMax()*bytesLidos/5000;
+        final long progresso=progressbar.getMax()*bytesLidos/progressbar.getMax();
         progressbar.setProgress((int)progresso);
-
-
-
-
     }
 
     //TASK para tocar
     public class PlayStreaming extends AsyncTask<Void,Void,Void>{
 
-        //final MediaPlayer mPlayer = new MediaPlayer();
-        //final mPlayer = new MediaPlayer();
+
         @Override
         protected Void doInBackground(Void... params) {
 
             mPlayer = new MediaPlayer();
 
-        Log.i("############","DENTRO DA TASK PLAYSTREAMING");
+
             try {
                 url = new URL(StringUrl);
             } catch (MalformedURLException e){e.printStackTrace();}
-
 
             mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
 
@@ -154,9 +159,8 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
                 mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                     @Override
                     public void onPrepared(MediaPlayer mediaPlayer) {
-                        Toast.makeText(getApplicationContext(), "Tocando e gravando agora!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "Tocando Rádio!", Toast.LENGTH_LONG).show();
                         mediaPlayer.start();
-
                     }
                 });
 
@@ -172,14 +176,10 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            Log.i("##### STATUS ####","GRAVANDO dentro do OnPostExecute...");
+
             new GravarMyStreaming().execute();
             super.onPostExecute(aVoid);
         }
-
-
-
-
 
     }
 
@@ -196,12 +196,12 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
 
             super.onPreExecute();
             long bytesLidos=0;
-            URL url;
-            BufferedInputStream bis;
-            InputStream inputStream;
-            OutputStream outputStream;
-            BufferedOutputStream boi;
-            progressbar.setMax(5000*1024);
+            //URL url;
+            //BufferedInputStream bis;
+            //InputStream inputStream;
+            //OutputStream outputStream;
+            //BufferedOutputStream boi;
+            //progressbar.setMax(5000);
             //progressbar.setVisibility(View.INVISIBLE);
             FileOutputStream fileOutputStream;
 
@@ -211,12 +211,12 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
         protected Long doInBackground(Void...params){
 
             try {
-                boi = new BufferedOutputStream(new FileOutputStream(myFile));
+                //boi = new BufferedOutputStream(new FileOutputStream(myFile)); //deixando lento
                 //fileOutputStream = new FileOutputStream(new File(root,"cbmn.mp3"));
+                fileOutputStream = new FileOutputStream(myFile);
                 //bis = new BufferedInputStream(inputStream);
                 //bis = (BufferedInputStream) url.openStream();
                 inputStream = url.openStream();
-
 
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
@@ -227,7 +227,7 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
 
             try {
 
-                while ((c = inputStream.read()) != -1 && c<(500*1024) ) {
+                while ((c = inputStream.read()) != -1 ) {
 
                     final TextView tv = (TextView)findViewById(R.id.textView2);
                     final TextView tv2 =(TextView)findViewById(R.id.textViewTransferidos);
@@ -236,12 +236,13 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
                         @Override
                         public void run() {
 
-                            tv.setText((bytesLidos/1024)/1024+" MB");
-                            tv2.setText(bytesLidos/1024+"Kb");
+                            tv.setText((bytesLidos/1024)/1024+"");
+                            tv2.setText(bytesLidos/1024+" Kb");
                         }
                     });
 
-                    boi.write(c);
+                    fileOutputStream.write(c);
+                    //boi.write(c);
                     bytesLidos++;
                     publishProgress((int)bytesLidos);
                 }
@@ -255,8 +256,8 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
         @Override
         protected void onProgressUpdate(Integer... values) {
 
-            int status = values[0]/1024/1024;
             progressbar.setProgress(values[0]);
+            int status = (values[0]);
             super.onProgressUpdate(status/progressbar.getMax());
         }
     }
