@@ -237,7 +237,7 @@ public class MainActivity extends Activity implements MediaPlayer.OnPreparedList
                         public void run() {
 
                             tv.setText((bytesLidos/1024)/1024+"");
-                            tv2.setText(bytesLidos/1024+" Kb");
+                            tv2.setText(bytesLidos/2048+" Kb");
                         }
                     });
 
